@@ -8,6 +8,7 @@ declare global {
       user?: {
         uid: string;
         email?: string;
+        admin: boolean;
       };
     }
   }
@@ -27,7 +28,11 @@ export async function verifyToken(
 
   try {
     const decoded = await admin.auth().verifyIdToken(match[1]);
-    req.user = { uid: decoded.uid, email: decoded.email };
+    req.user = {
+      uid: decoded.uid,
+      email: decoded.email,
+      admin: decoded.admin === true,
+    };
     next();
   } catch (err) {
     res.status(401).json({ error: 'Invalid token' });

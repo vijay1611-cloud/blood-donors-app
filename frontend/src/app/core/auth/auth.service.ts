@@ -4,6 +4,7 @@ import {
   User,
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  onIdTokenChanged,
   signInWithEmailAndPassword,
   signOut,
 } from '@angular/fire/auth';
@@ -14,11 +15,20 @@ export class AuthService {
 
   readonly user = signal<User | null>(null);
   readonly ready = signal(false);
+  readonly isAdmin = signal(false);
 
   constructor() {
     onAuthStateChanged(this.auth, (u) => {
       this.user.set(u);
       this.ready.set(true);
+    });
+    onIdTokenChanged(this.auth, async (u) => {
+      if (!u) {
+        this.isAdmin.set(false);
+        return;
+      }
+      const tokenResult = await u.getIdTokenResult();
+      this.isAdmin.set(tokenResult.claims['admin'] === true);
     });
   }
 
@@ -34,6 +44,13 @@ export class AuthService {
 
   signOut(): Promise<void> {
     return signOut(this.auth);
+  }
+
+  async refreshClaims(): Promise<void> {
+    const u = this.auth.currentUser;
+    if (!u) return;
+    const tokenResult = await u.getIdTokenResult(true);
+    this.isAdmin.set(tokenResult.claims['admin'] === true);
   }
 
   async getIdToken(): Promise<string | null> {

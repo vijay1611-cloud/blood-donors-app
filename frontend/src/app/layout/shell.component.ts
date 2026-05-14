@@ -21,6 +21,7 @@ import { AuthService } from '../core/auth/auth.service';
       <span class="brand">🩸 3C Blood Donors</span>
       <nav class="nav">
         <a mat-button routerLink="/home" routerLinkActive="active">Home</a>
+        <a mat-button routerLink="/requests" routerLinkActive="active">Requests</a>
         <a mat-button routerLink="/directory" routerLinkActive="active">Directory</a>
         <a mat-button routerLink="/donations" routerLinkActive="active">Donations</a>
         <a mat-button routerLink="/profile" routerLinkActive="active">Profile</a>

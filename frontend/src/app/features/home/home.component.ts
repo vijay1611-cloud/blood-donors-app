@@ -6,7 +6,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { DonorService } from '../../core/api/donor.service';
+import { RequestService } from '../../core/api/request.service';
 import { Donor } from '../../core/models/donor';
+import { BloodRequest } from '../../core/models/blood-request';
 import { EligibilityBadgeComponent } from '../../shared/eligibility-badge.component';
 
 @Component({
@@ -38,12 +40,46 @@ import { EligibilityBadgeComponent } from '../../shared/eligibility-badge.compon
         </mat-card>
       }
 
+      @if (matching().length > 0) {
+        <mat-card class="matches">
+          <div class="matches-header">
+            <mat-icon class="urgent">priority_high</mat-icon>
+            <h3>
+              {{ matching().length }} request{{ matching().length > 1 ? 's' : '' }} match your
+              blood group and city
+            </h3>
+          </div>
+          <ul>
+            @for (r of matching().slice(0, 3); track r._id) {
+              <li>
+                <a [routerLink]="['/requests', r._id]">
+                  <strong>{{ r.hospitalName }}</strong> · {{ r.city }} ·
+                  <span class="bg-tiny">{{ r.bloodGroup }}</span> ·
+                  {{ r.unitsNeeded }} unit{{ r.unitsNeeded > 1 ? 's' : '' }} ·
+                  <span [class]="'urgency-' + r.urgency">{{ r.urgency }}</span>
+                </a>
+              </li>
+            }
+          </ul>
+          <a mat-stroked-button routerLink="/requests" [queryParams]="{matching: 1}">
+            See all matching requests
+          </a>
+        </mat-card>
+      }
+
       <div class="grid">
         <mat-card class="link-card">
           <mat-icon>person</mat-icon>
           <h3>Your profile</h3>
           <p>Manage your donor information.</p>
           <a mat-stroked-button routerLink="/profile">Open</a>
+        </mat-card>
+
+        <mat-card class="link-card">
+          <mat-icon>bloodtype</mat-icon>
+          <h3>Blood requests</h3>
+          <p>See open requests and offer to help.</p>
+          <a mat-stroked-button routerLink="/requests">Browse</a>
         </mat-card>
 
         <mat-card class="link-card">
@@ -68,6 +104,17 @@ import { EligibilityBadgeComponent } from '../../shared/eligibility-badge.compon
     .prompt { padding: 16px; margin-bottom: 16px; background: #fff8e1; }
     .prompt h3 { margin: 0 0 4px; }
     .prompt p { margin: 0 0 12px; color: #666; }
+    .matches { padding: 16px; margin-bottom: 16px; background: #ffebee; border-left: 4px solid #c62828; }
+    .matches-header { display: flex; align-items: center; gap: 8px; }
+    .matches-header h3 { margin: 0; }
+    .matches .urgent { color: #c62828; }
+    .matches ul { margin: 8px 0; padding-left: 0; list-style: none; }
+    .matches li { margin: 4px 0; font-size: 14px; }
+    .matches a { color: inherit; text-decoration: none; }
+    .matches a:hover { text-decoration: underline; }
+    .bg-tiny { background: #c62828; color: white; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+    .urgency-critical { color: #c62828; font-weight: 500; }
+    .urgency-high { color: #ef6c00; font-weight: 500; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
     .link-card { padding: 20px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
     .link-card mat-icon { font-size: 32px; height: 32px; width: 32px; color: #c62828; }
@@ -77,7 +124,10 @@ import { EligibilityBadgeComponent } from '../../shared/eligibility-badge.compon
 })
 export class HomeComponent {
   private donors = inject(DonorService);
+  private requests = inject(RequestService);
+
   donor = signal<Donor | null>(null);
+  matching = signal<BloodRequest[]>([]);
   loading = signal(true);
 
   constructor() {
@@ -85,6 +135,12 @@ export class HomeComponent {
       next: (d) => {
         this.donor.set(d);
         this.loading.set(false);
+        if (d.bloodGroup && d.city) {
+          this.requests.list({ matching: true }).subscribe({
+            next: (rs) => this.matching.set(rs),
+            error: () => {},
+          });
+        }
       },
       error: () => this.loading.set(false),
     });
