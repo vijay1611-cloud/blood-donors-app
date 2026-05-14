@@ -34,8 +34,15 @@ export const routes: Routes = [
       },
       {
         path: 'directory',
+        canActivate: [adminGuard],
         loadComponent: () =>
           import('./features/directory/directory.component').then((m) => m.DirectoryComponent),
+      },
+      {
+        path: 'admin/users',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./features/admin/admin-users.component').then((m) => m.AdminUsersComponent),
       },
       {
         path: 'donations',

@@ -11,6 +11,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { DonorService } from '../../core/api/donor.service';
 import { BLOOD_GROUPS, BloodGroup } from '../../core/models/blood-group';
+import { SUPPORTED_CITIES, DEFAULT_CITY, SupportedCity } from '../../core/models/cities';
 import { Donor } from '../../core/models/donor';
 import { EligibilityBadgeComponent } from '../../shared/eligibility-badge.component';
 
@@ -68,7 +69,11 @@ import { EligibilityBadgeComponent } from '../../shared/eligibility-badge.compon
 
           <mat-form-field appearance="outline" class="span-2">
             <mat-label>City</mat-label>
-            <input matInput formControlName="city" />
+            <mat-select formControlName="city">
+              @for (c of cities; track c) {
+                <mat-option [value]="c">{{ c }}</mat-option>
+              }
+            </mat-select>
           </mat-form-field>
 
           <div class="span-2 toggle">
@@ -112,6 +117,7 @@ export class ProfileComponent {
   private snack = inject(MatSnackBar);
 
   groups = BLOOD_GROUPS;
+  cities = SUPPORTED_CITIES;
   donor = signal<Donor | null>(null);
   loading = signal(true);
   saving = signal(false);
@@ -121,7 +127,7 @@ export class ProfileComponent {
     lastName: [''],
     bloodGroup: [null as BloodGroup | null, Validators.required],
     phone: [''],
-    city: ['', Validators.required],
+    city: [DEFAULT_CITY as SupportedCity, Validators.required],
     willingToDonate: [true],
     receiveEmailNotifications: [true],
   });
@@ -135,7 +141,9 @@ export class ProfileComponent {
           lastName: d.lastName ?? '',
           bloodGroup: d.bloodGroup,
           phone: d.phone ?? '',
-          city: d.city ?? '',
+          city: (this.cities as readonly string[]).includes(d.city)
+            ? (d.city as SupportedCity)
+            : DEFAULT_CITY,
           willingToDonate: d.willingToDonate ?? true,
           receiveEmailNotifications: d.receiveEmailNotifications ?? true,
         });

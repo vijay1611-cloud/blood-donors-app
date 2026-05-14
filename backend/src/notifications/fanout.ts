@@ -3,6 +3,7 @@ import { BloodRequestDoc } from '../models/BloodRequest';
 import { NotificationLog } from '../models/NotificationLog';
 import { sendgridProvider, emailProviderEnabled } from './sendgridProvider';
 import { bloodRequestEmail } from './templates';
+import { DAYS_BETWEEN_DONATIONS } from '../util/eligibility';
 
 const DAILY_SEND_LIMIT = Number(process.env.EMAIL_DAILY_LIMIT || 100);
 
@@ -27,12 +28,23 @@ export async function fanOutBloodRequest(req: BloodRequestDoc): Promise<FanOutSu
     console.warn('[notify] APP_BASE_URL not set; emails will have empty deep links');
   }
 
+  // Skip donors whose most recent donation was less than 90 days ago (matches the
+  // in-app eligibility badge — see backend/src/util/eligibility.ts).
+  const eligibilityCutoff = new Date(
+    Date.now() - DAYS_BETWEEN_DONATIONS * 24 * 60 * 60 * 1000,
+  );
+
   const donors = await Donor.find({
     bloodGroup: req.bloodGroup,
     city: new RegExp(`^${req.city}$`, 'i'),
     willingToDonate: true,
     receiveEmailNotifications: { $ne: false },
     email: { $regex: /.+@.+/ },
+    $or: [
+      { lastDonationDate: null },
+      { lastDonationDate: { $exists: false } },
+      { lastDonationDate: { $lte: eligibilityCutoff } },
+    ],
   });
   summary.matched = donors.length;
   if (donors.length === 0) return summary;

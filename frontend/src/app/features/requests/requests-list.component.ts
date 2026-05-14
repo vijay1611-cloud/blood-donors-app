@@ -14,6 +14,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { RequestService } from '../../core/api/request.service';
 import { BloodRequest, UrgencyLevel } from '../../core/models/blood-request';
 import { BLOOD_GROUPS, BloodGroup } from '../../core/models/blood-group';
+import { SUPPORTED_CITIES, SupportedCity } from '../../core/models/cities';
 import { AuthService } from '../../core/auth/auth.service';
 
 @Component({
@@ -58,7 +59,12 @@ import { AuthService } from '../../core/auth/auth.service';
 
       <mat-form-field appearance="outline">
         <mat-label>City</mat-label>
-        <input matInput formControlName="city" />
+        <mat-select formControlName="city">
+          <mat-option [value]="null">Any</mat-option>
+          @for (c of cities; track c) {
+            <mat-option [value]="c">{{ c }}</mat-option>
+          }
+        </mat-select>
       </mat-form-field>
 
       <button mat-flat-button color="primary" type="submit" [disabled]="loading()">Search</button>
@@ -125,13 +131,14 @@ export class RequestsListComponent {
   auth = inject(AuthService);
 
   groups = BLOOD_GROUPS;
+  cities = SUPPORTED_CITIES;
   results = signal<BloodRequest[]>([]);
   loading = signal(false);
 
   filter = this.fb.nonNullable.group({
     matching: [false],
     bloodGroup: [null as BloodGroup | null],
-    city: [''],
+    city: [null as SupportedCity | null],
   });
 
   constructor() {
@@ -144,7 +151,7 @@ export class RequestsListComponent {
     this.requests.list({
       matching,
       bloodGroup: matching ? undefined : bloodGroup ?? undefined,
-      city: matching ? undefined : (city.trim() || undefined),
+      city: matching ? undefined : city ?? undefined,
     }).subscribe({
       next: (rows) => {
         this.results.set(rows);

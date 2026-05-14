@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { DonorService } from '../../core/api/donor.service';
 import { RequestService } from '../../core/api/request.service';
+import { AuthService } from '../../core/auth/auth.service';
 import { Donor } from '../../core/models/donor';
 import { BloodRequest } from '../../core/models/blood-request';
 import { EligibilityBadgeComponent } from '../../shared/eligibility-badge.component';
@@ -82,12 +83,21 @@ import { EligibilityBadgeComponent } from '../../shared/eligibility-badge.compon
           <a mat-stroked-button routerLink="/requests">Browse</a>
         </mat-card>
 
-        <mat-card class="link-card">
-          <mat-icon>group</mat-icon>
-          <h3>Donor directory</h3>
-          <p>Find donors by blood group and city.</p>
-          <a mat-stroked-button routerLink="/directory">Browse</a>
-        </mat-card>
+        @if (auth.isAdmin()) {
+          <mat-card class="link-card">
+            <mat-icon>group</mat-icon>
+            <h3>Donor directory</h3>
+            <p>Find donors by blood group and city.</p>
+            <a mat-stroked-button routerLink="/directory">Browse</a>
+          </mat-card>
+
+          <mat-card class="link-card">
+            <mat-icon>admin_panel_settings</mat-icon>
+            <h3>Admins</h3>
+            <p>Grant or revoke admin access.</p>
+            <a mat-stroked-button routerLink="/admin/users">Manage</a>
+          </mat-card>
+        }
 
         <mat-card class="link-card">
           <mat-icon>history</mat-icon>
@@ -125,6 +135,7 @@ import { EligibilityBadgeComponent } from '../../shared/eligibility-badge.compon
 export class HomeComponent {
   private donors = inject(DonorService);
   private requests = inject(RequestService);
+  auth = inject(AuthService);
 
   donor = signal<Donor | null>(null);
   matching = signal<BloodRequest[]>([]);

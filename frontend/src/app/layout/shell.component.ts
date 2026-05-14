@@ -22,9 +22,12 @@ import { AuthService } from '../core/auth/auth.service';
       <nav class="nav">
         <a mat-button routerLink="/home" routerLinkActive="active">Home</a>
         <a mat-button routerLink="/requests" routerLinkActive="active">Requests</a>
-        <a mat-button routerLink="/directory" routerLinkActive="active">Directory</a>
         <a mat-button routerLink="/donations" routerLinkActive="active">Donations</a>
         <a mat-button routerLink="/profile" routerLinkActive="active">Profile</a>
+        @if (auth.isAdmin()) {
+          <a mat-button routerLink="/directory" routerLinkActive="active">Directory</a>
+          <a mat-button routerLink="/admin/users" routerLinkActive="active">Admins</a>
+        }
       </nav>
       <span class="spacer"></span>
       <button mat-button (click)="logout()">Log out</button>
@@ -43,7 +46,7 @@ import { AuthService } from '../core/auth/auth.service';
   `],
 })
 export class ShellComponent {
-  private auth = inject(AuthService);
+  auth = inject(AuthService);
   private router = inject(Router);
 
   async logout() {

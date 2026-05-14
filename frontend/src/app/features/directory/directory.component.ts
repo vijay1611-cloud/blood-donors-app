@@ -10,6 +10,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { DonorService } from '../../core/api/donor.service';
 import { BLOOD_GROUPS, BloodGroup } from '../../core/models/blood-group';
+import { SUPPORTED_CITIES, SupportedCity } from '../../core/models/cities';
 import { Donor } from '../../core/models/donor';
 import { EligibilityBadgeComponent } from '../../shared/eligibility-badge.component';
 
@@ -44,7 +45,12 @@ import { EligibilityBadgeComponent } from '../../shared/eligibility-badge.compon
 
       <mat-form-field appearance="outline">
         <mat-label>City</mat-label>
-        <input matInput formControlName="city" placeholder="e.g. Chennai" />
+        <mat-select formControlName="city">
+          <mat-option [value]="null">Any</mat-option>
+          @for (c of cities; track c) {
+            <mat-option [value]="c">{{ c }}</mat-option>
+          }
+        </mat-select>
       </mat-form-field>
 
       <button mat-flat-button color="primary" type="submit" [disabled]="loading()">Search</button>
@@ -94,12 +100,13 @@ export class DirectoryComponent {
   private donors = inject(DonorService);
 
   groups = BLOOD_GROUPS;
+  cities = SUPPORTED_CITIES;
   results = signal<Donor[]>([]);
   loading = signal(false);
 
   filter = this.fb.nonNullable.group({
     bloodGroup: [null as BloodGroup | null],
-    city: [''],
+    city: [null as SupportedCity | null],
   });
 
   constructor() {
@@ -111,7 +118,7 @@ export class DirectoryComponent {
     const { bloodGroup, city } = this.filter.getRawValue();
     this.donors.list({
       bloodGroup: bloodGroup ?? undefined,
-      city: city.trim() || undefined,
+      city: city ?? undefined,
     }).subscribe({
       next: (rows) => {
         this.results.set(rows);

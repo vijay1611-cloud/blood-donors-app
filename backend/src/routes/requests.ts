@@ -4,6 +4,7 @@ import { BloodRequest, REQUEST_STATUSES, URGENCY_LEVELS } from '../models/BloodR
 import { RequestResponse } from '../models/RequestResponse';
 import { NotificationLog } from '../models/NotificationLog';
 import { Donor, BLOOD_GROUPS, BloodGroup } from '../models/Donor';
+import { isSupportedCity } from '../models/cities';
 import { requireAdmin } from '../middleware/requireAdmin';
 import { fanOutBloodRequest } from '../notifications/fanout';
 
@@ -68,6 +69,9 @@ router.post('/', requireAdmin, async (req: Request, res: Response) => {
   }
   if (!hospitalName?.trim() || !city?.trim() || !contactName?.trim() || !contactPhone?.trim()) {
     return res.status(400).json({ error: 'hospitalName, city, contactName, contactPhone are required' });
+  }
+  if (!isSupportedCity(city)) {
+    return res.status(400).json({ error: 'Unsupported city' });
   }
   if (urgency && !URGENCY_LEVELS.includes(urgency)) {
     return res.status(400).json({ error: 'Invalid urgency' });

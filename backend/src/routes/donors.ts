@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { Donor, BLOOD_GROUPS, BloodGroup } from '../models/Donor';
+import { isSupportedCity } from '../models/cities';
 import { computeEligibility } from '../util/eligibility';
+import { requireAdmin } from '../middleware/requireAdmin';
 
 const router = Router();
 
@@ -49,6 +51,9 @@ router.put('/me', async (req: Request, res: Response) => {
   if (bloodGroup && !BLOOD_GROUPS.includes(bloodGroup as BloodGroup)) {
     return res.status(400).json({ error: `Invalid bloodGroup. Allowed: ${BLOOD_GROUPS.join(', ')}` });
   }
+  if (city && !isSupportedCity(String(city))) {
+    return res.status(400).json({ error: 'Unsupported city' });
+  }
 
   const update: Record<string, unknown> = {};
   if (firstName !== undefined) update.firstName = String(firstName).trim();
@@ -70,8 +75,8 @@ router.put('/me', async (req: Request, res: Response) => {
   res.json(serializeDonor(donor));
 });
 
-// GET /api/donors — search directory (filters: bloodGroup, city)
-router.get('/', async (req: Request, res: Response) => {
+// GET /api/donors — search directory (admin only)
+router.get('/', requireAdmin, async (req: Request, res: Response) => {
   const { bloodGroup, city } = req.query;
   const filter: Record<string, unknown> = { willingToDonate: true };
   if (bloodGroup && BLOOD_GROUPS.includes(bloodGroup as BloodGroup)) {

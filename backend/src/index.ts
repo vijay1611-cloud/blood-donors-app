@@ -7,6 +7,7 @@ import { verifyToken } from './middleware/verifyToken';
 import donorRoutes from './routes/donors';
 import donationRoutes from './routes/donations';
 import requestRoutes from './routes/requests';
+import adminRoutes from './routes/admin';
 
 const PORT = Number(process.env.PORT || 4000);
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/blooddonors';
@@ -28,6 +29,7 @@ async function main() {
   app.use('/api/donors', verifyToken, donorRoutes);
   app.use('/api/donations', verifyToken, donationRoutes);
   app.use('/api/requests', verifyToken, requestRoutes);
+  app.use('/api/admin', verifyToken, adminRoutes);
 
   app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     console.error('[error]', err);
