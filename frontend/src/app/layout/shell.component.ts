@@ -18,7 +18,7 @@ import { AuthService } from '../core/auth/auth.service';
   ],
   template: `
     <mat-toolbar color="primary">
-      <span class="brand">🩸 Blood Donors</span>
+      <span class="brand">🩸 3C Blood Donors</span>
       <nav class="nav">
         <a mat-button routerLink="/home" routerLinkActive="active">Home</a>
         <a mat-button routerLink="/directory" routerLinkActive="active">Directory</a>
