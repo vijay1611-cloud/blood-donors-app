@@ -9,7 +9,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { RequestService } from '../../core/api/request.service';
+import { RequestService, NotificationSummary } from '../../core/api/request.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { BloodRequest, Responder, RequestStatus } from '../../core/models/blood-request';
 
@@ -80,6 +80,33 @@ import { BloodRequest, Responder, RequestStatus } from '../../core/models/blood-
       </mat-card>
 
       @if (auth.isAdmin()) {
+        <h2 class="responders-heading">Notifications</h2>
+        @if (loadingNotifications()) {
+          <mat-spinner diameter="24" />
+        } @else if (notifications()) {
+          @let n = notifications()!;
+          <mat-card class="notif-card">
+            <div class="notif-row">
+              <span class="notif-stat ok">{{ n.sent }} sent</span>
+              @if (n.failed > 0) { <span class="notif-stat fail">{{ n.failed }} failed</span> }
+              @if (n.skipped > 0) { <span class="notif-stat skip">{{ n.skipped }} skipped (daily cap)</span> }
+              @if (n.total === 0) { <span class="muted">No emails sent (no matching donors with email + opt-in)</span> }
+            </div>
+            @if (n.failed > 0) {
+              <details>
+                <summary>Failure details</summary>
+                <ul>
+                  @for (item of n.items; track item.donorUid) {
+                    @if (item.status === 'failed') {
+                      <li>{{ item.donorUid }} — {{ item.error }}</li>
+                    }
+                  }
+                </ul>
+              </details>
+            }
+          </mat-card>
+        }
+
         <h2 class="responders-heading">
           Responders ({{ responders().length }})
         </h2>
@@ -135,6 +162,14 @@ import { BloodRequest, Responder, RequestStatus } from '../../core/models/blood-
     .status-fulfilled { color: #1976d2; }
     .status-cancelled, .status-expired { color: #9e9e9e; }
     .responders-heading { margin-top: 32px; }
+    .notif-card { padding: 16px; }
+    .notif-row { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+    .notif-stat { font-weight: 500; }
+    .notif-stat.ok { color: #2e7d32; }
+    .notif-stat.fail { color: #c62828; }
+    .notif-stat.skip { color: #ef6c00; }
+    .notif-card details { margin-top: 8px; font-size: 13px; }
+    .notif-card details ul { margin: 4px 0 0; padding-left: 20px; }
     .empty { padding: 16px; text-align: center; }
     @media (max-width: 600px) { .meta { grid-template-columns: 1fr; } }
   `],
@@ -149,8 +184,10 @@ export class RequestDetailComponent implements OnInit {
 
   request = signal<BloodRequest | null>(null);
   responders = signal<Responder[]>([]);
+  notifications = signal<NotificationSummary | null>(null);
   loading = signal(true);
   loadingResponders = signal(false);
+  loadingNotifications = signal(false);
   responding = signal(false);
 
   ngOnInit() {
@@ -163,7 +200,10 @@ export class RequestDetailComponent implements OnInit {
       next: (r) => {
         this.request.set(r);
         this.loading.set(false);
-        if (this.auth.isAdmin()) this.loadResponders();
+        if (this.auth.isAdmin()) {
+          this.loadResponders();
+          this.loadNotifications();
+        }
       },
       error: () => {
         this.loading.set(false);
@@ -179,6 +219,17 @@ export class RequestDetailComponent implements OnInit {
         this.loadingResponders.set(false);
       },
       error: () => this.loadingResponders.set(false),
+    });
+  }
+
+  private loadNotifications() {
+    this.loadingNotifications.set(true);
+    this.requests.notifications(this.id()).subscribe({
+      next: (n) => {
+        this.notifications.set(n);
+        this.loadingNotifications.set(false);
+      },
+      error: () => this.loadingNotifications.set(false),
     });
   }
 

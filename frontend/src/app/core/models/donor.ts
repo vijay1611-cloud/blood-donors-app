@@ -8,6 +8,7 @@ export interface Eligibility {
 export interface Donor {
   id?: string;
   firebaseUid: string;
+  email: string;
   firstName: string;
   lastName: string;
   bloodGroup: BloodGroup | null;
@@ -15,6 +16,7 @@ export interface Donor {
   city: string;
   lastDonationDate: string | null;
   willingToDonate: boolean;
+  receiveEmailNotifications: boolean;
   eligibility: Eligibility;
 }
 
@@ -25,4 +27,5 @@ export interface DonorUpdate {
   phone?: string;
   city?: string;
   willingToDonate?: boolean;
+  receiveEmailNotifications?: boolean;
 }

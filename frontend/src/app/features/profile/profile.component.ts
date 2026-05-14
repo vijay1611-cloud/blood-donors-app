@@ -77,6 +77,12 @@ import { EligibilityBadgeComponent } from '../../shared/eligibility-badge.compon
             </mat-slide-toggle>
           </div>
 
+          <div class="span-2 toggle">
+            <mat-slide-toggle formControlName="receiveEmailNotifications">
+              Email me when a request matches my blood group + city
+            </mat-slide-toggle>
+          </div>
+
           <div class="span-2 actions">
             <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid || saving()">
               {{ saving() ? 'Saving…' : 'Save profile' }}
@@ -117,6 +123,7 @@ export class ProfileComponent {
     phone: [''],
     city: ['', Validators.required],
     willingToDonate: [true],
+    receiveEmailNotifications: [true],
   });
 
   constructor() {
@@ -130,6 +137,7 @@ export class ProfileComponent {
           phone: d.phone ?? '',
           city: d.city ?? '',
           willingToDonate: d.willingToDonate ?? true,
+          receiveEmailNotifications: d.receiveEmailNotifications ?? true,
         });
         this.loading.set(false);
       },

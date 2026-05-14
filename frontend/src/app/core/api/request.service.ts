@@ -50,4 +50,24 @@ export class RequestService {
   responders(id: string): Observable<Responder[]> {
     return this.http.get<Responder[]>(`${this.base}/${id}/responders`);
   }
+
+  notifications(id: string): Observable<NotificationSummary> {
+    return this.http.get<NotificationSummary>(`${this.base}/${id}/notifications`);
+  }
+}
+
+export interface NotificationLogItem {
+  donorUid: string;
+  channel: string;
+  status: 'sent' | 'failed' | 'skipped';
+  error: string;
+  sentAt: string;
+}
+
+export interface NotificationSummary {
+  total: number;
+  sent: number;
+  failed: number;
+  skipped: number;
+  items: NotificationLogItem[];
 }

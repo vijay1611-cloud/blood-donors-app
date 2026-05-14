@@ -9,6 +9,7 @@ function serializeDonor(d: any) {
   return {
     id: d._id,
     firebaseUid: d.firebaseUid,
+    email: d.email,
     firstName: d.firstName,
     lastName: d.lastName,
     bloodGroup: d.bloodGroup,
@@ -16,6 +17,7 @@ function serializeDonor(d: any) {
     city: d.city,
     lastDonationDate: d.lastDonationDate,
     willingToDonate: d.willingToDonate,
+    receiveEmailNotifications: d.receiveEmailNotifications,
     eligibility,
   };
 }
@@ -23,9 +25,14 @@ function serializeDonor(d: any) {
 // GET /api/donors/me — current donor profile (creates an empty one on first call)
 router.get('/me', async (req: Request, res: Response) => {
   const uid = req.user!.uid;
+  const tokenEmail = req.user!.email || '';
+
   let donor = await Donor.findOne({ firebaseUid: uid });
   if (!donor) {
-    donor = await Donor.create({ firebaseUid: uid });
+    donor = await Donor.create({ firebaseUid: uid, email: tokenEmail });
+  } else if (tokenEmail && donor.email !== tokenEmail) {
+    donor.email = tokenEmail;
+    await donor.save();
   }
   res.json(serializeDonor(donor));
 });
@@ -33,7 +40,11 @@ router.get('/me', async (req: Request, res: Response) => {
 // PUT /api/donors/me — update current donor profile
 router.put('/me', async (req: Request, res: Response) => {
   const uid = req.user!.uid;
-  const { firstName, lastName, bloodGroup, phone, city, willingToDonate } = req.body || {};
+  const tokenEmail = req.user!.email || '';
+  const {
+    firstName, lastName, bloodGroup, phone, city,
+    willingToDonate, receiveEmailNotifications,
+  } = req.body || {};
 
   if (bloodGroup && !BLOOD_GROUPS.includes(bloodGroup as BloodGroup)) {
     return res.status(400).json({ error: `Invalid bloodGroup. Allowed: ${BLOOD_GROUPS.join(', ')}` });
@@ -46,6 +57,10 @@ router.put('/me', async (req: Request, res: Response) => {
   if (phone !== undefined) update.phone = String(phone).trim();
   if (city !== undefined) update.city = String(city).trim();
   if (willingToDonate !== undefined) update.willingToDonate = !!willingToDonate;
+  if (receiveEmailNotifications !== undefined) {
+    update.receiveEmailNotifications = !!receiveEmailNotifications;
+  }
+  if (tokenEmail) update.email = tokenEmail;
 
   const donor = await Donor.findOneAndUpdate(
     { firebaseUid: uid },

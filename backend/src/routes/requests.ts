@@ -2,8 +2,10 @@ import { Router, Request, Response } from 'express';
 import { Types } from 'mongoose';
 import { BloodRequest, REQUEST_STATUSES, URGENCY_LEVELS } from '../models/BloodRequest';
 import { RequestResponse } from '../models/RequestResponse';
+import { NotificationLog } from '../models/NotificationLog';
 import { Donor, BLOOD_GROUPS, BloodGroup } from '../models/Donor';
 import { requireAdmin } from '../middleware/requireAdmin';
+import { fanOutBloodRequest } from '../notifications/fanout';
 
 const router = Router();
 
@@ -84,6 +86,13 @@ router.post('/', requireAdmin, async (req: Request, res: Response) => {
     createdByUid: req.user!.uid,
   });
 
+  // Fire-and-forget fan-out — don't block the API response on email sends.
+  fanOutBloodRequest(doc as any)
+    .then((summary) =>
+      console.log(`[notify] request ${(doc as any)._id} fan-out:`, summary),
+    )
+    .catch((err) => console.error('[notify] fan-out failed', err));
+
   res.status(201).json(doc);
 });
 
@@ -132,6 +141,35 @@ router.post('/:id/respond', async (req: Request, res: Response) => {
     }
     throw err;
   }
+});
+
+// GET /api/requests/:id/notifications — admin only; fan-out summary
+router.get('/:id/notifications', requireAdmin, async (req: Request, res: Response) => {
+  const { id } = req.params;
+  if (!isValidObjectId(id)) return res.status(400).json({ error: 'Invalid id' });
+
+  const logs = await NotificationLog.find({ requestId: id }).sort({ sentAt: 1 });
+  const summary = logs.reduce(
+    (acc, l) => {
+      acc[l.status] = (acc[l.status] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
+
+  res.json({
+    total: logs.length,
+    sent: summary.sent || 0,
+    failed: summary.failed || 0,
+    skipped: summary.skipped || 0,
+    items: logs.map((l) => ({
+      donorUid: l.donorUid,
+      channel: l.channel,
+      status: l.status,
+      error: l.error,
+      sentAt: l.sentAt,
+    })),
+  });
 });
 
 // GET /api/requests/:id/responders — admin only; returns Donor profiles + response note
