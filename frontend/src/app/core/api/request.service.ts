@@ -54,6 +54,21 @@ export class RequestService {
   notifications(id: string): Observable<NotificationSummary> {
     return this.http.get<NotificationSummary>(`${this.base}/${id}/notifications`);
   }
+
+  approve(id: string): Observable<BloodRequest> {
+    return this.http.post<BloodRequest>(`${this.base}/${id}/approve`, {});
+  }
+
+  reject(id: string): Observable<BloodRequest> {
+    return this.http.post<BloodRequest>(`${this.base}/${id}/reject`, {});
+  }
+
+  submitPublic(input: BloodRequestInput): Observable<{ id: string; status: string; message: string }> {
+    return this.http.post<{ id: string; status: string; message: string }>(
+      `${environment.apiBaseUrl}/public/requests`,
+      input,
+    );
+  }
 }
 
 export interface NotificationLogItem {

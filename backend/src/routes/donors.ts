@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { Donor, BLOOD_GROUPS, BloodGroup } from '../models/Donor';
-import { isSupportedCity } from '../models/cities';
+import { isSupportedLocality } from '../models/localities';
 import { computeEligibility } from '../util/eligibility';
 import { requireAdmin } from '../middleware/requireAdmin';
 
@@ -51,8 +51,8 @@ router.put('/me', async (req: Request, res: Response) => {
   if (bloodGroup && !BLOOD_GROUPS.includes(bloodGroup as BloodGroup)) {
     return res.status(400).json({ error: `Invalid bloodGroup. Allowed: ${BLOOD_GROUPS.join(', ')}` });
   }
-  if (city && !isSupportedCity(String(city))) {
-    return res.status(400).json({ error: 'Unsupported city' });
+  if (city && !isSupportedLocality(String(city))) {
+    return res.status(400).json({ error: 'Unsupported locality' });
   }
 
   const update: Record<string, unknown> = {};

@@ -2,7 +2,9 @@ import { Schema, model, InferSchemaType } from 'mongoose';
 import { BLOOD_GROUPS } from './Donor';
 
 export const URGENCY_LEVELS = ['low', 'normal', 'high', 'critical'] as const;
-export const REQUEST_STATUSES = ['open', 'fulfilled', 'cancelled', 'expired'] as const;
+export const REQUEST_STATUSES = [
+  'pending_review', 'open', 'fulfilled', 'cancelled', 'expired',
+] as const;
 
 export type UrgencyLevel = (typeof URGENCY_LEVELS)[number];
 export type RequestStatus = (typeof REQUEST_STATUSES)[number];
@@ -19,7 +21,8 @@ const bloodRequestSchema = new Schema(
     neededBy: { type: Date, default: null },
     notes: { type: String, default: '' },
     status: { type: String, enum: REQUEST_STATUSES, default: 'open', index: true },
-    createdByUid: { type: String, required: true },
+    createdByUid: { type: String, default: '' },
+    submittedByPublic: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

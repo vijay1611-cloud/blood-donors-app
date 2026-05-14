@@ -35,6 +35,15 @@ import { BloodRequest, Responder, RequestStatus } from '../../core/models/blood-
     } @else if (request()) {
       @let r = request()!;
       <mat-card class="detail" [class]="'urgency-' + r.urgency">
+        @if (r.status === 'pending_review') {
+          <div class="pending-banner">
+            <mat-icon>hourglass_top</mat-icon>
+            <div>
+              <strong>Pending admin review</strong>
+              <p>Submitted via the public emergency form. Approve to notify matching donors.</p>
+            </div>
+          </div>
+        }
         <div class="row">
           <div>
             <h1>{{ r.hospitalName }}</h1>
@@ -71,6 +80,15 @@ import { BloodRequest, Responder, RequestStatus } from '../../core/models/blood-
           }
 
           @if (auth.isAdmin()) {
+            @if (r.status === 'pending_review') {
+              <button mat-flat-button color="primary" (click)="approve()" [disabled]="moderating()">
+                <mat-icon>check</mat-icon>
+                {{ moderating() ? 'Approving…' : 'Approve & notify donors' }}
+              </button>
+              <button mat-stroked-button color="warn" (click)="reject()" [disabled]="moderating()">
+                Reject
+              </button>
+            }
             @if (r.status === 'open') {
               <button mat-stroked-button (click)="updateStatus('fulfilled')">Mark fulfilled</button>
               <button mat-stroked-button color="warn" (click)="updateStatus('cancelled')">Cancel</button>
@@ -159,8 +177,17 @@ import { BloodRequest, Responder, RequestStatus } from '../../core/models/blood-
     .actions { display: flex; gap: 12px; align-items: center; padding-top: 16px; flex-wrap: wrap; }
     .responded { display: inline-flex; align-items: center; gap: 6px; color: #2e7d32; font-weight: 500; }
     .status-open { color: #2e7d32; font-weight: 500; }
+    .status-pending_review { color: #ef6c00; font-weight: 500; }
     .status-fulfilled { color: #1976d2; }
     .status-cancelled, .status-expired { color: #9e9e9e; }
+    .pending-banner {
+      display: flex; gap: 12px; align-items: flex-start;
+      background: #fff3e0; border-left: 4px solid #ef6c00;
+      padding: 12px 16px; margin-bottom: 16px; border-radius: 4px;
+    }
+    .pending-banner mat-icon { color: #ef6c00; margin-top: 2px; }
+    .pending-banner strong { display: block; color: #e65100; }
+    .pending-banner p { margin: 4px 0 0; color: #666; font-size: 13px; }
     .responders-heading { margin-top: 32px; }
     .notif-card { padding: 16px; }
     .notif-row { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
@@ -189,6 +216,7 @@ export class RequestDetailComponent implements OnInit {
   loadingResponders = signal(false);
   loadingNotifications = signal(false);
   responding = signal(false);
+  moderating = signal(false);
 
   ngOnInit() {
     this.load();
@@ -245,6 +273,38 @@ export class RequestDetailComponent implements OnInit {
         this.responding.set(false);
         const msg = err?.error?.error || 'Could not record your response';
         this.snack.open(msg, 'Dismiss', { duration: 4000 });
+      },
+    });
+  }
+
+  approve() {
+    this.moderating.set(true);
+    this.requests.approve(this.id()).subscribe({
+      next: (updated) => {
+        this.moderating.set(false);
+        this.snack.open('Approved. Notifying matching donors…', 'OK', { duration: 3000 });
+        this.request.set({ ...updated, hasResponded: this.request()?.hasResponded });
+        // Reload notifications after a beat so admin sees the fan-out count.
+        setTimeout(() => this.load(), 1500);
+      },
+      error: (err) => {
+        this.moderating.set(false);
+        this.snack.open(err?.error?.error || 'Could not approve', 'Dismiss', { duration: 4000 });
+      },
+    });
+  }
+
+  reject() {
+    this.moderating.set(true);
+    this.requests.reject(this.id()).subscribe({
+      next: (updated) => {
+        this.moderating.set(false);
+        this.snack.open('Rejected', 'OK', { duration: 2000 });
+        this.request.set({ ...updated, hasResponded: this.request()?.hasResponded });
+      },
+      error: (err) => {
+        this.moderating.set(false);
+        this.snack.open(err?.error?.error || 'Could not reject', 'Dismiss', { duration: 4000 });
       },
     });
   }

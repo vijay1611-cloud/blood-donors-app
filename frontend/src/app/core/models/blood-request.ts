@@ -3,7 +3,9 @@ import { BloodGroup } from './blood-group';
 export const URGENCY_LEVELS = ['low', 'normal', 'high', 'critical'] as const;
 export type UrgencyLevel = (typeof URGENCY_LEVELS)[number];
 
-export const REQUEST_STATUSES = ['open', 'fulfilled', 'cancelled', 'expired'] as const;
+export const REQUEST_STATUSES = [
+  'pending_review', 'open', 'fulfilled', 'cancelled', 'expired',
+] as const;
 export type RequestStatus = (typeof REQUEST_STATUSES)[number];
 
 export interface BloodRequest {

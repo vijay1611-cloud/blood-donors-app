@@ -38,6 +38,9 @@ import { AuthService } from '../../core/auth/auth.service';
           </button>
         </form>
         <p class="muted">No account? <a routerLink="/signup">Create one</a></p>
+        <div class="emergency-cta">
+          <a routerLink="/emergency">🚨 Need urgent blood? Submit a request without signing up →</a>
+        </div>
       </mat-card>
     </div>
   `,
@@ -48,6 +51,9 @@ import { AuthService } from '../../core/auth/auth.service';
     form { display: flex; flex-direction: column; gap: 4px; margin-top: 16px; }
     .error { color: #c62828; margin: 4px 0; }
     .muted { color: #666; margin-top: 16px; text-align: center; }
+    .emergency-cta { margin-top: 24px; padding-top: 16px; border-top: 1px solid #eee; text-align: center; font-size: 14px; }
+    .emergency-cta a { color: #c62828; text-decoration: none; font-weight: 500; }
+    .emergency-cta a:hover { text-decoration: underline; }
   `],
 })
 export class LoginComponent {

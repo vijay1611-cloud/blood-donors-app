@@ -8,6 +8,7 @@ import donorRoutes from './routes/donors';
 import donationRoutes from './routes/donations';
 import requestRoutes from './routes/requests';
 import adminRoutes from './routes/admin';
+import publicRoutes from './routes/public';
 
 const PORT = Number(process.env.PORT || 4000);
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/blooddonors';
@@ -25,6 +26,9 @@ async function main() {
   app.use(express.json());
 
   app.get('/health', (_req, res) => res.json({ ok: true }));
+
+  // Public endpoints (no auth) MUST be mounted before the verifyToken-gated routes.
+  app.use('/api/public', publicRoutes);
 
   app.use('/api/donors', verifyToken, donorRoutes);
   app.use('/api/donations', verifyToken, donationRoutes);

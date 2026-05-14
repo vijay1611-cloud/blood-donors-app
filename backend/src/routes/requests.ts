@@ -4,7 +4,7 @@ import { BloodRequest, REQUEST_STATUSES, URGENCY_LEVELS } from '../models/BloodR
 import { RequestResponse } from '../models/RequestResponse';
 import { NotificationLog } from '../models/NotificationLog';
 import { Donor, BLOOD_GROUPS, BloodGroup } from '../models/Donor';
-import { isSupportedCity } from '../models/cities';
+import { isSupportedLocality } from '../models/localities';
 import { requireAdmin } from '../middleware/requireAdmin';
 import { fanOutBloodRequest } from '../notifications/fanout';
 
@@ -14,8 +14,26 @@ function isValidObjectId(id: string): boolean {
   return Types.ObjectId.isValid(id);
 }
 
+const REQUEST_EXPIRY_DAYS = Number(process.env.REQUEST_EXPIRY_DAYS || 10);
+
+// Flip any open requests older than REQUEST_EXPIRY_DAYS to status: 'expired'.
+// Called opportunistically before list/get/create so the directory stays fresh
+// without a background scheduler (which Render's free tier can't run reliably).
+async function expireStaleRequests(): Promise<number> {
+  const cutoff = new Date(Date.now() - REQUEST_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+  const result = await BloodRequest.updateMany(
+    { status: 'open', createdAt: { $lt: cutoff } },
+    { $set: { status: 'expired' } },
+  );
+  if (result.modifiedCount > 0) {
+    console.log(`[requests] auto-expired ${result.modifiedCount} request(s) older than ${REQUEST_EXPIRY_DAYS} days`);
+  }
+  return result.modifiedCount;
+}
+
 // GET /api/requests — list (filters: bloodGroup, city, status). Defaults to open.
 router.get('/', async (req: Request, res: Response) => {
+  await expireStaleRequests();
   const { bloodGroup, city, status, matching } = req.query;
   const filter: Record<string, unknown> = {};
 
@@ -36,13 +54,31 @@ router.get('/', async (req: Request, res: Response) => {
   filter.status = status && REQUEST_STATUSES.includes(status as any) ? status : 'open';
 
   const items = await BloodRequest.find(filter).sort({ createdAt: -1 }).limit(200);
-  res.json(items);
+
+  // Mark which of these the current user has already responded to (single batched query).
+  const respondedIds = new Set<string>();
+  if (items.length > 0) {
+    const responses = await RequestResponse.find({
+      donorUid: req.user!.uid,
+      requestId: { $in: items.map((i) => i._id) },
+    }).select('requestId');
+    for (const r of responses) respondedIds.add(String(r.requestId));
+  }
+
+  res.json(
+    items.map((i) => ({
+      ...i.toObject(),
+      hasResponded: respondedIds.has(String(i._id)),
+    })),
+  );
 });
 
 // GET /api/requests/:id — details (any auth)
 router.get('/:id', async (req: Request, res: Response) => {
   const { id } = req.params;
   if (!isValidObjectId(id)) return res.status(400).json({ error: 'Invalid id' });
+
+  await expireStaleRequests();
 
   const item = await BloodRequest.findById(id);
   if (!item) return res.status(404).json({ error: 'Not found' });
@@ -70,12 +106,14 @@ router.post('/', requireAdmin, async (req: Request, res: Response) => {
   if (!hospitalName?.trim() || !city?.trim() || !contactName?.trim() || !contactPhone?.trim()) {
     return res.status(400).json({ error: 'hospitalName, city, contactName, contactPhone are required' });
   }
-  if (!isSupportedCity(city)) {
-    return res.status(400).json({ error: 'Unsupported city' });
+  if (!isSupportedLocality(city)) {
+    return res.status(400).json({ error: 'Unsupported locality' });
   }
   if (urgency && !URGENCY_LEVELS.includes(urgency)) {
     return res.status(400).json({ error: 'Invalid urgency' });
   }
+
+  await expireStaleRequests();
 
   const doc = await BloodRequest.create({
     bloodGroup,
@@ -98,6 +136,46 @@ router.post('/', requireAdmin, async (req: Request, res: Response) => {
     .catch((err) => console.error('[notify] fan-out failed', err));
 
   res.status(201).json(doc);
+});
+
+// POST /api/requests/:id/approve — admin only; flips pending_review → open and fans out
+router.post('/:id/approve', requireAdmin, async (req: Request, res: Response) => {
+  const { id } = req.params;
+  if (!isValidObjectId(id)) return res.status(400).json({ error: 'Invalid id' });
+
+  const doc = await BloodRequest.findById(id);
+  if (!doc) return res.status(404).json({ error: 'Not found' });
+  if (doc.status !== 'pending_review') {
+    return res.status(409).json({ error: `Request is already ${doc.status}` });
+  }
+
+  doc.status = 'open';
+  doc.createdByUid = req.user!.uid; // record who approved
+  await doc.save();
+
+  fanOutBloodRequest(doc as any)
+    .then((summary) =>
+      console.log(`[notify] approved request ${(doc as any)._id} fan-out:`, summary),
+    )
+    .catch((err) => console.error('[notify] fan-out failed', err));
+
+  res.json(doc);
+});
+
+// POST /api/requests/:id/reject — admin only; flips pending_review → cancelled
+router.post('/:id/reject', requireAdmin, async (req: Request, res: Response) => {
+  const { id } = req.params;
+  if (!isValidObjectId(id)) return res.status(400).json({ error: 'Invalid id' });
+
+  const doc = await BloodRequest.findById(id);
+  if (!doc) return res.status(404).json({ error: 'Not found' });
+  if (doc.status !== 'pending_review') {
+    return res.status(409).json({ error: `Request is already ${doc.status}` });
+  }
+
+  doc.status = 'cancelled';
+  await doc.save();
+  res.json(doc);
 });
 
 // PATCH /api/requests/:id — admin only (update status / fields)
@@ -124,6 +202,8 @@ router.patch('/:id', requireAdmin, async (req: Request, res: Response) => {
 router.post('/:id/respond', async (req: Request, res: Response) => {
   const { id } = req.params;
   if (!isValidObjectId(id)) return res.status(400).json({ error: 'Invalid id' });
+
+  await expireStaleRequests();
 
   const reqDoc = await BloodRequest.findById(id);
   if (!reqDoc) return res.status(404).json({ error: 'Not found' });

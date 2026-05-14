@@ -11,7 +11,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { RequestService } from '../../core/api/request.service';
 import { BLOOD_GROUPS, BloodGroup } from '../../core/models/blood-group';
-import { SUPPORTED_CITIES, DEFAULT_CITY, SupportedCity } from '../../core/models/cities';
+import { CHENNAI_LOCALITIES, ChennaiLocality } from '../../core/models/localities';
 import { URGENCY_LEVELS, UrgencyLevel, BloodRequestInput } from '../../core/models/blood-request';
 
 @Component({
@@ -68,9 +68,9 @@ import { URGENCY_LEVELS, UrgencyLevel, BloodRequestInput } from '../../core/mode
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>City</mat-label>
+          <mat-label>Locality (Chennai)</mat-label>
           <mat-select formControlName="city">
-            @for (c of cities; track c) {
+            @for (c of localities; track c) {
               <mat-option [value]="c">{{ c }}</mat-option>
             }
           </mat-select>
@@ -119,7 +119,7 @@ export class RequestCreateComponent {
 
   groups = BLOOD_GROUPS;
   urgencies = URGENCY_LEVELS;
-  cities = SUPPORTED_CITIES;
+  localities = CHENNAI_LOCALITIES;
   saving = signal(false);
   today = new Date();
 
@@ -128,7 +128,7 @@ export class RequestCreateComponent {
     unitsNeeded: [1, [Validators.required, Validators.min(1), Validators.max(50)]],
     urgency: ['normal' as UrgencyLevel, Validators.required],
     hospitalName: ['', Validators.required],
-    city: [DEFAULT_CITY as SupportedCity, Validators.required],
+    city: [null as ChennaiLocality | null, Validators.required],
     contactName: ['', Validators.required],
     contactPhone: ['', Validators.required],
     neededBy: [null as Date | null],
@@ -144,7 +144,7 @@ export class RequestCreateComponent {
       unitsNeeded: v.unitsNeeded,
       urgency: v.urgency,
       hospitalName: v.hospitalName.trim(),
-      city: v.city.trim(),
+      city: v.city as ChennaiLocality,
       contactName: v.contactName.trim(),
       contactPhone: v.contactPhone.trim(),
       neededBy: v.neededBy ? v.neededBy.toISOString() : null,

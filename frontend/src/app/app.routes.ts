@@ -10,6 +10,11 @@ export const routes: Routes = [
       import('./features/auth/login.component').then((m) => m.LoginComponent),
   },
   {
+    path: 'emergency',
+    loadComponent: () =>
+      import('./features/emergency/emergency.component').then((m) => m.EmergencyComponent),
+  },
+  {
     path: 'signup',
     canActivate: [guestGuard],
     loadComponent: () =>

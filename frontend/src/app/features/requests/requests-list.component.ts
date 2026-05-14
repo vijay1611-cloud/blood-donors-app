@@ -14,7 +14,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { RequestService } from '../../core/api/request.service';
 import { BloodRequest, UrgencyLevel } from '../../core/models/blood-request';
 import { BLOOD_GROUPS, BloodGroup } from '../../core/models/blood-group';
-import { SUPPORTED_CITIES, SupportedCity } from '../../core/models/cities';
+import { CHENNAI_LOCALITIES, ChennaiLocality } from '../../core/models/localities';
 import { AuthService } from '../../core/auth/auth.service';
 
 @Component({
@@ -58,10 +58,10 @@ import { AuthService } from '../../core/auth/auth.service';
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>City</mat-label>
+        <mat-label>Locality</mat-label>
         <mat-select formControlName="city">
           <mat-option [value]="null">Any</mat-option>
-          @for (c of cities; track c) {
+          @for (c of localities; track c) {
             <mat-option [value]="c">{{ c }}</mat-option>
           }
         </mat-select>
@@ -95,6 +95,11 @@ import { AuthService } from '../../core/auth/auth.service';
               @if (r.neededBy) {
                 <p class="needed-by">Needed by {{ r.neededBy | date:'mediumDate' }}</p>
               }
+              @if (r.hasResponded) {
+                <p class="responded-badge">
+                  <mat-icon>check_circle</mat-icon> You responded
+                </p>
+              }
             </mat-card>
           </a>
         }
@@ -122,6 +127,16 @@ import { AuthService } from '../../core/auth/auth.service';
     .urgency-high .urgency { color: #ef6c00; }
     .units { color: #666; }
     .needed-by { margin: 4px 0 0; font-size: 13px; color: #666; }
+    .responded-badge {
+      margin: 8px 0 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      color: #2e7d32;
+      font-weight: 500;
+    }
+    .responded-badge mat-icon { font-size: 16px; height: 16px; width: 16px; }
     .empty { padding: 24px; text-align: center; }
   `],
 })
@@ -131,14 +146,14 @@ export class RequestsListComponent {
   auth = inject(AuthService);
 
   groups = BLOOD_GROUPS;
-  cities = SUPPORTED_CITIES;
+  localities = CHENNAI_LOCALITIES;
   results = signal<BloodRequest[]>([]);
   loading = signal(false);
 
   filter = this.fb.nonNullable.group({
     matching: [false],
     bloodGroup: [null as BloodGroup | null],
-    city: [null as SupportedCity | null],
+    city: [null as ChennaiLocality | null],
   });
 
   constructor() {
